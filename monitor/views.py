@@ -16,19 +16,27 @@ def home(request):
     return render(request, 'home.html')
 
 def get_json_files():
-    folder = './cs'
-    files = []
+    folder = './cs_data'
+    files = {}
     for file in sorted(os.listdir(folder)):
-        if file.endswith('.json') and 'qaq_butterfly' in file:
-            timestamp = file.split("_")[-2] + "_" + file.split("_")[-1].replace(".json", "")
-            files.append({
+        if file.endswith('.json') and 'qaq_' in file:
+            parts = file.split("_")
+            item_type = parts[1]  # 提取类型
+            timestamp = parts[-2] + "_" + parts[-1].replace(".json", "")
+            
+            if timestamp not in files:
+                files[timestamp] = []  # 初始化时间戳对应的列表
+            
+            files[timestamp].append({
                 'filename': file,
-                'timestamp': timestamp
+                'item_type': item_type  # 添加类型信息
             })
-    return files
+    
+    # 转换为列表格式
+    return [{'timestamp': ts, 'items': items} for ts, items in files.items()]
 
 def load_price_data(filename):
-    folder = './cs'
+    folder = './cs_data'
     data_points = []
     
     with open(os.path.join(folder, filename), 'r', encoding='utf-8') as f:
@@ -57,30 +65,33 @@ def load_price_data(filename):
 
 def price_overview(request):
     files = get_json_files()
-    selected_file = request.GET.get('file', files[0]['filename'] if files else None)
+    selected_timestamp = request.GET.get('timestamp', files[0]['timestamp'] if files else None)
     
-    if not selected_file:
+    if not selected_timestamp:
         return render(request, 'overview.html', {"data": None, "files": files})
     
-    df = load_price_data(selected_file)
-    if df.empty:
-        return render(request, 'overview.html', {"data": None, "files": files})
-    
-    # 准备总览数据
-    items_data = []
-    for _, row in df.iterrows():
-        items_data.append({
-            "name": row["item"],
-            "buff_price": row["buff_price"],
-            "uu_price": row["uu_price"],
-            "today_change": row["today_change"],
-            "week_change": row["week_change"]
-        })
+    # 组织所有类型的数据
+    all_items_data = {}
+    for entry in files:
+        if entry['timestamp'] == selected_timestamp:  # 只处理选中的时间戳
+            for item in entry['items']:
+                df = load_price_data(item['filename'])
+                for _, row in df.iterrows():
+                    item_type = item['item_type']
+                    if item_type not in all_items_data:
+                        all_items_data[item_type] = []
+                    all_items_data[item_type].append({
+                        "name": row["item"],
+                        "buff_price": row["buff_price"],
+                        "uu_price": row["uu_price"],
+                        "today_change": row["today_change"],
+                        "week_change": row["week_change"]
+                    })
     
     return render(request, "overview.html", {
-        "data": items_data,
+        "data": all_items_data,  # 返回所有类型的数据
         "files": files,
-        "selected_file": selected_file
+        "selected_timestamp": selected_timestamp
     })
 
 def price_chart(request):

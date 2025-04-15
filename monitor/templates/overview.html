@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>价格总览</title>
+    <title>总览</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -68,44 +68,51 @@
         </div>
     </div>
 
-    {% if files %}
     <div class="file-selector">
         <form method="get">
             <label for="file">选择时间点：</label>
             <select name="file" id="file" onchange="this.form.submit()">
-                {% for file in files %}
-                <option value="{{ file.filename }}" {% if file.filename == selected_file %}selected{% endif %}>
-                    {{ file.timestamp }}
+                {% for entry in files %}
+                <option value="{{ entry.timestamp }}" {% if entry.timestamp == selected_timestamp %}selected{% endif %}>
+                    {{ entry.timestamp }}
                 </option>
                 {% endfor %}
             </select>
         </form>
     </div>
-    {% endif %}
 
+    <h2>选择时间点</h2>
+    <ul>
+        {% for entry in files %}
+            <li><a href="?timestamp={{ entry.timestamp }}">{{ entry.timestamp }}</a></li>
+        {% endfor %}
+    </ul>
+
+    <h2>所有类型的数据</h2>
     {% if data %}
-    <table class="price-table">
-        <thead>
-            <tr>
-                <th>物品名称</th>
-                <th>价格（元）</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in data %}
-            <tr>
-                <td>
-                    <a href="{% url 'monitor:price_chart' %}?item={{ item.name|urlencode }}&file={{ selected_file }}">{{ item.name }}</a>
-                </td>
-                <td>
-                    ¥{{ item.price|floatformat:2 }}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        {% for item_type, items in data.items %}
+            <h3>{{ item_type }}</h3>
+            <table border="1">
+                <tr>
+                    <th>名称</th>
+                    <th>Buff 价格</th>
+                    <th>UU 价格</th>
+                    <th>今日变化</th>
+                    <th>周变化</th>
+                </tr>
+                {% for item in items %}
+                    <tr>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.buff_price }}</td>
+                        <td>{{ item.uu_price }}</td>
+                        <td>{{ item.today_change }}</td>
+                        <td>{{ item.week_change }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+        {% endfor %}
     {% else %}
-    <p>暂无数据</p>
+        <p>没有数据可显示。</p>
     {% endif %}
 </body>
 </html> 

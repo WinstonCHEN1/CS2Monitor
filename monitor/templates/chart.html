@@ -1,188 +1,52 @@
-{% load monitor_extras %}
+<!-- chart.html -->
 <!DOCTYPE html>
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>价格趋势</title>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .file-selector {
-            margin-bottom: 20px;
-            padding: 10px;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .file-selector select {
-            padding: 5px;
-            margin-right: 10px;
-        }
-        .chart-container {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        #priceChart {
-            width: 100%;
-            height: 500px;
-        }
-        .price-info {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .current-price {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        .price-change {
-            font-size: 16px;
-            margin-top: 10px;
-        }
-        .price-up {
-            color: #e74c3c;
-        }
-        .price-down {
-            color: #2ecc71;
-        }
-        .nav-links {
-            margin-bottom: 20px;
-        }
-        .nav-links a {
-            margin-right: 15px;
-            text-decoration: none;
-            color: #333;
-        }
-        .nav-links a:hover {
-            color: #666;
-        }
-    </style>
+    <title>饰品价格图表</title>
 </head>
 <body>
-    <div class="header">
-        <h1>{{ data.item }} 价格趋势</h1>
-        <div class="nav-links">
-            <a href="{% url 'monitor:price_overview' %}">返回价格总览</a>
-        </div>
-    </div>
-
-    {% if files %}
-    <div class="file-selector">
-        <form method="get">
-            <input type="hidden" name="item" value="{{ data.item }}">
-            <label for="file">选择时间点：</label>
-            <select name="file" id="file" onchange="this.form.submit()">
-                {% for file in files %}
-                <option value="{{ file.filename }}" {% if file.filename == selected_file %}selected{% endif %}>
-                    {{ file.timestamp }}
-                </option>
-                {% endfor %}
-            </select>
-        </form>
-    </div>
-    {% endif %}
-
-    {% if data %}
-    <div class="price-info">
-        <div class="current-price">
-            当前价格：¥{{ data.current_price|floatformat:2 }}
-        </div>
-        {% if data.prices|length > 1 %}
-        {% with first_price=data.prices.0 last_price=data.prices|last %}
-        <div class="price-change {% if last_price > first_price %}price-up{% else %}price-down{% endif %}">
-            价格变化：{{ last_price|sub:first_price|floatformat:2 }} 元
-            ({{ last_price|sub:first_price|div:first_price|mul:100|floatformat:2 }}%)
-        </div>
-        {% endwith %}
-        {% endif %}
-    </div>
-
-    <div class="chart-container">
-        <div id="priceChart"></div>
-    </div>
-
+    <h1>{{ data.item }} 的价格图表</h1>
+    <select id="file-select">
+        {% for file in files %}
+            <option value="{{ file.filename }}" {% if file.filename == selected_file %}selected{% endif %}>{{ file.filename }}</option>
+        {% endfor %}
+    </select>
+    
+    <canvas id="priceChart"></canvas>
+    
     <script>
-        var chartDom = document.getElementById('priceChart');
-        var myChart = echarts.init(chartDom);
-        var option = {
-            title: {
-                text: '{{ data.item }} 价格趋势'
-            },
-            tooltip: {
-                trigger: 'axis',
-                formatter: function(params) {
-                    return params[0].name + '<br/>价格: ' + params[0].value + ' 元';
-                }
-            },
-            xAxis: {
-                type: 'category',
-                data: {{ data.times|safe }},
-                axisLabel: {
-                    rotate: 45
-                }
-            },
-            yAxis: {
-                type: 'value',
-                name: '价格（元）',
-                axisLabel: {
-                    formatter: '¥{value}'
-                }
-            },
-            series: [{
-                data: {{ data.prices|safe }},
-                type: 'line',
-                smooth: true,
-                symbol: 'circle',
-                symbolSize: 8,
-                itemStyle: {
-                    color: '#3498db'
+        const ctx = document.getElementById('priceChart').getContext('2d');
+        const chartData = {
+            labels: {{ data.times|safe }},
+            datasets: [
+                {
+                    label: 'Buff 价格',
+                    data: {{ data.buff_prices|safe }},
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    fill: false
                 },
-                areaStyle: {
-                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                        { offset: 0, color: 'rgba(52, 152, 219, 0.3)' },
-                        { offset: 1, color: 'rgba(52, 152, 219, 0.1)' }
-                    ])
+                {
+                    label: 'UU 价格',
+                    data: {{ data.uu_prices|safe }},
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    fill: false
                 }
-            }],
-            grid: {
-                left: '3%',
-                right: '4%',
-                bottom: '15%',
-                containLabel: true
-            }
+            ]
         };
-        myChart.setOption(option);
         
-        // 响应式调整
-        window.addEventListener('resize', function() {
-            myChart.resize();
+        const myChart = new Chart(ctx, {
+            type: 'line',
+            data: chartData,
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
         });
     </script>
-    {% else %}
-    <p>暂无数据</p>
-    {% endif %}
 </body>
 </html>
