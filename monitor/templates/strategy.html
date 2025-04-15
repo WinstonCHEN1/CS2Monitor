@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">量化交易策略分析</h2>
+    
+    <!-- 文件选择器 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">选择数据文件</h5>
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <select name="file" class="form-select">
+                        {% for file in files %}
+                        <option value="{{ file.filename }}" {% if file.filename == selected_file %}selected{% endif %}>
+                            {{ file.timestamp }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <input type="text" name="item" class="form-control" placeholder="输入饰品名称" value="{{ data.item|default:'★ 蝴蝶刀' }}">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">分析</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if data %}
+    <!-- 当前价格和状态 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">当前状态</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>饰品名称：</strong> {{ data.item }}</p>
+                    <p><strong>当前价格：</strong> ¥{{ data.current_price|floatformat:2 }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>交易建议：</strong> 
+                        {% if data.signals.current_status == 'buy' %}
+                        <span class="badge bg-success">买入</span>
+                        {% elif data.signals.current_status == 'sell' %}
+                        <span class="badge bg-danger">卖出</span>
+                        {% else %}
+                        <span class="badge bg-secondary">持有</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 技术指标 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">技术指标</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <p><strong>MA5：</strong> ¥{{ data.indicators.MA5|floatformat:2 }}</p>
+                    <p><strong>MA20：</strong> ¥{{ data.indicators.MA20|floatformat:2 }}</p>
+                </div>
+                <div class="col-md-4">
+                    <p><strong>RSI：</strong> {{ data.indicators.RSI|floatformat:2 }}</p>
+                    <p><strong>波动率：</strong> {{ data.indicators.volatility|floatformat:2 }}</p>
+                </div>
+                <div class="col-md-4">
+                    <p><strong>价格Z值：</strong> {{ data.indicators.price_zscore|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 交易信号 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">交易信号分析</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>买入信号</h6>
+                    <ul class="list-group">
+                        {% for signal in data.signals.buy_signals %}
+                        <li class="list-group-item list-group-item-success">{{ signal }}</li>
+                        {% empty %}
+                        <li class="list-group-item">暂无买入信号</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>卖出信号</h6>
+                    <ul class="list-group">
+                        {% for signal in data.signals.sell_signals %}
+                        <li class="list-group-item list-group-item-danger">{{ signal }}</li>
+                        {% empty %}
+                        <li class="list-group-item">暂无卖出信号</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 交易建议 -->
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">交易建议</h5>
+            <div class="alert {% if data.signals.current_status == 'buy' %}alert-success{% elif data.signals.current_status == 'sell' %}alert-danger{% else %}alert-secondary{% endif %}">
+                {% if data.signals.current_status == 'buy' %}
+                <h6>建议买入</h6>
+                <ul>
+                    <li>当前价格处于相对低位</li>
+                    <li>技术指标显示超卖</li>
+                    <li>建议在15:00交易窗口前完成交易</li>
+                </ul>
+                {% elif data.signals.current_status == 'sell' %}
+                <h6>建议卖出</h6>
+                <ul>
+                    <li>当前价格处于相对高位</li>
+                    <li>技术指标显示超买</li>
+                    <li>建议在15:00交易窗口前完成交易</li>
+                </ul>
+                {% else %}
+                <h6>建议持有</h6>
+                <ul>
+                    <li>当前价格处于合理区间</li>
+                    <li>技术指标未显示明显信号</li>
+                    <li>建议继续观察市场变化</li>
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        暂无数据可供分析，请选择数据文件。
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 
