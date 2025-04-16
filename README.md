@@ -17,3 +17,11 @@ pip install -r requirements.txt
 ```shell
 python manage.py runserver
 ```
+
+## To Do List
+
+- [ ] Create a database to store the data 
+- [ ] MCP Implementation for interface
+- [ ] Strategy Design
+- [ ] Front-end framework replace
+ 
